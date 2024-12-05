@@ -1,0 +1,330 @@
+```{r envSetup, include = FALSE, echo = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    message = FALSE,
+    warning = FALSE,
+    out.width = "65%",
+    fig.align = "center",
+    comment = ">"
+    )
+```
+
+
+
+```{r, include = FALSE, echo = FALSE}
+##library(tidyverse)
+library(corrr)
+library(psych)
+library(lavaan)
+#library(kableExtra)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(survey)
+library(haven)
+library(rempsyc)
+library(broom)
+library(report)
+library(effectsize)
+library(aod)
+library(readr)
+#library(tidymodels)
+library(stargazer)
+library(forcats)
+library(ggcorrplot)
+library(caret)
+library(knitr)
+library(ROCR)
+library(jtools)
+#=library(car)
+library(xtable)
+#library(texreg)
+#library(svyVGAM)
+library(glmnet)
+library(ggpubr)
+library(lme4)
+library(nlme)
+library(weights)
+library(miscTools)
+library(systemfit)
+library(multcomp)
+require(ggplot2)
+require(GGally)
+require(reshape2)
+#require(compiler)
+#require(parallel)
+#require(boot)
+require(lattice)
+library(HLMdiag)
+#library(DHARMa)
+library(car) #for the Levene test which we will not discuss here
+library(Matrix)
+library(brms)
+library(margins)
+library(performance)
+library(ggnewscale)
+library(ggeffects)
+library(bayestestR) # for hypothesis testing
+library(brmsmargins)
+library(ggeffects)
+library(marginaleffects)
+library(effects)
+library(margins)
+library(modelr)
+library(plm)
+library(effectsize)
+library(aod)
+library(readr)
+library(tidymodels)
+library(stargazer)
+library(forcats)
+library(ggcorrplot)
+library(caret)
+library(knitr)
+library(ROCR)
+library(jtools)
+#=library(car)
+library(xtable)
+#library(texreg)
+#library(svyVGAM)
+library(glmnet)
+library(ggpubr)
+library(foreign)
+library(AER)
+library(lme4)
+library(brms)
+library(glmnet)
+library(ggpubr)
+library(formatR)
+library(pglm)
+library(acqr)
+```
+
+
+```{r}
+df <- read.csv("IOS_app_information.csv", header = T)
+```
+
+```{r}
+glimpse(df)
+```
+```{r}
+df$name_in_icon <- as.factor(df$name_in_icon)  
+df$most_frequent_stars <- as.factor(df$most_frequent_stars) 
+df$second_most_frequent_stars <- as.factor(df$second_most_frequent_stars)
+df$third_most_frequent_stars <- as.factor(df$third_most_frequent_stars) 
+df$apple_watch <- as.factor(df$apple_watch)
+df$apple_wallet <- as.factor(df$apple_wallet)
+```
+
+
+```{r}
+View(df)
+```
+
+```{r}
+df2 <- df
+```
+
+```{r}
+df2 <- df2 %>% mutate(
+    weighted_average = avg_rating * num_ratings
+)
+```
+
+
+```{r}
+df2 %>% dplyr::select(Bank, weighted_average) %>% arrange(desc(weighted_average))
+```
+
+```{r}
+df2 %>% dplyr::select(Bank, avg_rating) %>% arrange(desc(avg_rating))
+```
+
+```{r}
+df2 %>% dplyr::select(Bank, latest_version_rate) %>% arrange(desc(latest_version_rate))
+```
+
+
+```{r}
+df2 <- df2 %>% mutate(latest_version_weightedAvg = latest_version_numRating * latest_version_rate)
+df2 %>% dplyr::select(Bank, latest_version_weightedAvg) %>% arrange(desc(latest_version_weightedAvg))
+
+```
+
+```{r}
+df2 %>% dplyr::select(Bank, latest_version_numRating) %>% arrange(desc(latest_version_numRating))
+
+```
+
+```{r}
+df2 %>% dplyr::select(chart_rank, avg_rating, num_ratings, weighted_average,latest_version_rate, latest_version_numRating,latest_version_weightedAvg, age_min, num_pictures_iphone, num_pictures_ipad, num_pictures_watch, size, most_frequent_stars, second_most_frequent_stars, third_most_frequent_stars) %>% psych::describe()
+```
+
+
+```{r}
+glimpse(df2)
+```
+
+```{r}
+ggplot(df2, 
+       aes(x = latest_version_weightedAvg, y = weighted_average)) + 
+    geom_point(size = 3) + 
+    geom_text(aes(label = Bank), vjust = -1, hjust = 0.5, size = 3) +  
+    geom_hline(yintercept = mean(df2$weighted_average), linetype = "dashed", color = "red", size = 1, alpha = 0.6) + 
+    geom_vline(xintercept = mean(df2$latest_version_weightedAvg), linetype = "dashed", color = "blue", size = 1, alpha = 0.7) + 
+    theme_minimal() +
+    labs(y = "Weighted Average Rating (K)", x = "Weighted Average Rating (Latest Version), K") + 
+    scale_y_continuous(labels = function(x) x / 1000,  # Divide by 100,000 to adjust the unit
+                       breaks = scales::pretty_breaks(n = 10)) + 
+    scale_x_continuous(labels = function(x) x / 1000,  
+                       breaks = scales::pretty_breaks(n = 10)) + 
+    annotate("text", x = 35000, y = mean(df2$weighted_average), 
+           label = paste("Weighted Average Rating", round(mean(df2$weighted_average), 2)), 
+           hjust = -0.1, vjust = -1.5, color = "red", fontface = "bold") + 
+     annotate("text", x = 16000, y = 5000000, 
+           label = paste("Latest W Average Rating", round(mean(df2$latest_version_weightedAvg), 2)), 
+           hjust = -0.1, vjust = -1.5, color = "blue", fontface = "bold", angle = -90)
+```
+
+```{r}
+library(scales)  # For the label formatting functions
+```
+
+```{r, fig.height=5}
+ggplot(df2, 
+       aes(x = latest_version_rate, y = avg_rating, size = num_ratings)) + 
+    geom_point(alpha = 0.7) + 
+    geom_text(aes(label = Bank), vjust = -2, fontface = "bold", hjust = 0.5, size = 3) +  
+    geom_hline(yintercept = mean(df2$avg_rating), linetype = "dashed", color = "red", size = 1) + 
+    geom_vline(xintercept = mean(df2$latest_version_rate), linetype = "dashed", color = "blue", size = 1) + 
+    theme_minimal() +
+    labs(y = "Overall Average Rating", x = "Latest Version Average Rating", size = "Number of Ratings") + 
+    
+    annotate("text", x = 1, y = mean(df2$avg_rating), 
+           label = paste("Average Rating", round(mean(df2$avg_rating), 2)), 
+           hjust = -0.1, vjust = -1.5, color = "red", fontface = "bold") + 
+    
+    annotate("text", x = mean(df2$latest_version_rate) - 0.25, y = 5, 
+           label = paste("Latest Version Avg.Rating", round(mean(df2$latest_version_rate), 2)), 
+           hjust = -0.1, vjust = -1.5, color = "blue", fontface = "bold", angle = -90) + 
+    
+    scale_size_continuous(range = c(3, 10), labels = label_number(scale_cut = cut_short_scale()))  #CHAT GPT 
+
+```
+
+
+
+
+
+```{r}
+avg_rating_mean <- mean(df2$avg_rating, na.rm = TRUE)
+
+ggplot(data    = df2,
+       aes(x   = third_most_frequent_stars,
+           y   = avg_rating))+ 
+  geom_point(size = 3) +
+  geom_hline(yintercept = avg_rating_mean, linetype = "dashed", color = "red", size = 1.2) + 
+  labs(y = "Average Rating", x = "Third Most Frequent Stars") +
+  theme_minimal() 
+```
+```{r}
+avg_numberofrating_mean <- mean(df2$num_ratings, na.rm = TRUE)
+
+ggplot(data    = df2,
+       aes(x   = third_most_frequent_stars,
+           y   = num_ratings))+ 
+  geom_point(size = 3) +
+  geom_hline(yintercept = avg_numberofrating_mean, linetype = "dashed", color = "blue", size = 1.2) + 
+  labs(y = "Average Number of Ratings", x = "Third Most Frequent Stars (100k)") +
+  theme_minimal() +
+  scale_y_continuous(labels = function(x) x / 1000,  # Divide by 100,000 to adjust the unit
+                     breaks = scales::pretty_breaks(n = 10)) +
+  theme(axis.text.y = element_text(hjust = 1.5)) + 
+  annotate("text", x = 1.6, y = avg_numberofrating_mean, 
+           label = paste("Average Number of Ratings:", round(avg_numberofrating_mean, 2)), 
+           hjust = -0.1, vjust = -1.5, color = "blue", fontface = "bold")
+```
+
+```{r}
+df2$num_pictures_iphone
+```
+
+```{r, fig.width=5, fig.height=10}
+iphone <- ggplot(data = df2, 
+       aes(third_most_frequent_stars, 
+           fill = as.factor(num_pictures_iphone))) + 
+       geom_bar(position = "fill") + 
+       labs(x = "", y = "Percentage (fill)", fill = 'iPhone Screenshots') + fill_palette("Pastel1")
+
+ipad <- ggplot(data = df2, 
+       aes(third_most_frequent_stars, 
+           fill = as.factor(num_pictures_ipad))) + 
+       geom_bar(position = "fill") + 
+       labs(x = "", y = "Percentage (fill)", fill = 'iPad Screenshots') + fill_palette("Pastel1")
+
+watch <- ggplot(data = df2, 
+       aes(third_most_frequent_stars, 
+           fill = as.factor(num_pictures_watch))) + 
+       geom_bar(position = "fill") + 
+       labs(x = "", y = "Percentage (fill)", fill = 'Apple Watch Screenshots') + fill_palette("Pastel1")
+
+ggarrange(
+    iphone, ipad, watch,
+    labels = c("iPhone", "iPad", "Apple Watch"),
+    ncol = 1,
+    nrow = 3
+    
+) 
+```
+
+```{r}
+df2 %>% count(theme_color)
+```
+
+
+
+
+$ date_collection            <chr> "2024-10-29", "2024-10-29", "2024-10-29", "2024-10-29", "2024-10-29"
+$ appname                    <chr> "CIBC Mobile Banking", "TD Canada", "Scotiabank", "BMO Mobile Banking", "RBC Mobile"
+$ category                   <chr> "Finance", "Finance", "Finance", "Finance", "Finance"
+$ headline                   <chr> "Everyday banking on the go", "Bank on the go with the TD app", "Designed for real …
+$ theme_color                <chr> "red", "green", "red", "blue", "blue"
+$ name_in_icon               <fct> 1, 1, 0, 0, 0
+$ chart_rank                 <int> 4, 5, 7, 10, 3
+$ avg_rating                 <dbl> 4.2, 4.5, 4.7, 4.6, 4.8
+$ num_ratings                <int> 21000, 79200, 761500, 111300, 208900
+$ age_min                    <int> 4, 4, 4, 4, 4
+$ price                      <chr> "free", "free", "free", "free", "free"
+$ num_pictures_iphone        <int> 8, 10, 8, 4, 10
+$ num_pictures_ipad          <int> 3, 10, 5, 3, 10
+$ num_pictures_watch         <int> 4, 4, 3, 0, 4
+$ developer                  <chr> "CIBC", "TD", "Scotiabank", "BMO Financial Group", "Royal Bank of Canada"
+$ language                   <chr> "['EN', 'FR']", "['EN', 'FR', 'SCH', 'TCH']", "['EN', 'FR']", "['EN', 'FR']", "['EN…
+$ size                       <dbl> 140.7, 328.2, 193.3, 124.6, 583.7
+$ device_compatible          <chr> "['iphone', 'ipad', 'apple watch']", "['iphone', 'ipad', 'apple watch']", "['iphone…
+$ most_frequent_stars        <fct> 5, 5, 5, 5, 5
+$ second_most_frequent_stars <fct> 4, 4, 4, 4, 4
+$ third_most_frequent_stars  <fct> 1, 1, 3, 1, 3
+$ update_info                <chr> "2024-09-26", "2024-10-21", "2024-10-18", "2024-09-19", "2024-10-08"
+$ version                    <chr> "10.57.3", "24.09", "2409.0.3", "6.12.0", "6.46"
+$ data_gathered              <chr> "['purchases', 'search history', 'usage data', 'location', 'sensitive info', 'ident…
+$ apple_watch                <fct> 1, 1, 1, 0, 1
+$ apple_wallet               <fct> 1, 1, 1, 1, 1
+$ youmightlike               <chr> "['Neo Financial', 'Borrowel: Credit Report', 'TD Insurance', 'Western Union Send M…
+$ summary                    <chr> "FIND IMPORTANT DISCLOSURES BELOW. The CIBC Mobile Banking App has received the hig…
+$ url_link                   <chr> "https://apps.apple.com/ca/app/cibc-mobile-banking/id351448953", "https://apps.appl…
+$ Bank                       <chr> "CIBC", "TD", "Scotia", "BMO", "RBC"
+$ weighted_average
+
+
+
+
+
+
+
+
+
+
+
+

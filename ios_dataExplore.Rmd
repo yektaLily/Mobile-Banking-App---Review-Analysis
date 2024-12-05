@@ -1,0 +1,201 @@
+```{r envSetup, include = FALSE, echo = FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE,
+    message = FALSE,
+    warning = FALSE,
+    out.width = "65%",
+    fig.align = "center",
+    comment = ">"
+    )
+```
+
+
+
+```{r, include = FALSE, echo = FALSE}
+library(corrr)
+library(psych)
+library(lavaan)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(haven)
+library(rempsyc)
+library(broom)
+library(report)
+library(effectsize)
+library(aod)
+library(readr)
+library(stargazer)
+library(forcats)
+library(ggcorrplot)
+library(caret)
+library(knitr)
+library(ROCR)
+library(jtools)
+library(xtable)
+library(ggpubr)
+library(miscTools)
+library(systemfit)
+library(multcomp)
+require(GGally)
+require(reshape2)
+require(lattice)
+library(HLMdiag)
+library(Matrix)
+library(ggnewscale)
+library(ggeffects)
+library(ggeffects)
+library(aod)
+library(readr)
+library(tidymodels)
+library(foreign)
+library(AER)
+library(formatR)
+library(NLP)
+library(tm) # text mining 
+library(tidytext) # text analysis 
+#library(janeaustenr)
+library(stringr)
+library(igraph) # manipulating and analyzing networks
+library(ggraph)
+library(igraph)
+library(widyr)
+#library(tm.plugin.webmining)
+library(purrr)
+library(topicmodels)
+library(scales)
+#library(mallet) # LDA alternative for topic modeling 
+library(cld2)
+```
+
+
+```{r}
+full_ios_reviews <- read.csv("ios_top5banks.csv")
+```
+
+```{r}
+glimpse(full_ios_reviews)
+```
+
+```{r}
+original_data_copy_ios <- full_ios_reviews
+
+```
+
+```{r}
+dim(original_data_copy_ios)
+```
+
+Chatgpt help with detecting non english text: 
+```{r}
+full_ios_reviews <- full_ios_reviews %>%
+  mutate(language = cld2::detect_language(review)) %>% 
+  filter(language == "en")                            
+
+```
+
+```{r}
+dim(full_ios_reviews)
+```
+
+```{r}
+full_ios_reviews <- full_ios_reviews %>% dplyr::select(rating, title, review, Bank)
+```
+
+    
+Some summary statistics for the datasets: 
+```{r}
+print(paste("Average rating IOS: ", round(mean(full_ios_reviews$rating),2), " Google: ", round(mean(full_google_reviews$score),2)))
+print(paste("Median rating IOS: ", median(full_ios_reviews$rating)," Google: ", median(full_google_reviews$score)))
+print(paste("Std. rating IOS: ", round(sd(full_ios_reviews$rating),2), " Google: ", round(sd(full_google_reviews$score),2)))
+print(paste("Max rating IOS: ", max(full_ios_reviews$rating)," Google: ", max(full_google_reviews$score)))
+print(paste("Min rating IOS: ", min(full_ios_reviews$rating)," Google: ", min(full_google_reviews$score)))
+```
+```{r}
+full_ios_reviews %>% group_by(Bank) %>% count(Bank) %>% arrange(desc(n))
+```
+
+```{r}
+full_ios_reviews %>% group_by(Bank) %>% count(Bank) %>% summarize(prop = round(n/(1879+1848+1907+3779+1744),2)) %>% arrange(desc(prop))
+```
+
+```{r}
+full_ios_reviews %>% group_by(Bank) %>% dplyr::summarize(
+    avg_rating = mean(rating),
+    median_rating = median(rating),
+    sd_rating = sd(rating),
+    min_rating = min(rating),
+    max_rating = max(rating)
+)
+```
+
+It is considering the size of each Bank (group_by).
+-----------------
+
+Tokenize: 
+https://www.tidytextmining.com/tidytext 
+
+```{r}
+max(nchar(full_ios_reviews$review))
+
+```
+
+```{r}
+full_ios_reviews %>%
+  mutate(length = nchar(review)) %>%
+  summarise(max_length = max(length), min_length = min(length), average_lenght = mean(length))
+```
+
+
+```{r}
+token_ios_data <- full_ios_reviews %>% unnest_tokens(word, review)
+
+```
+
+```{r}
+paste("IOS tokenized: ", dim(token_ios_data))
+```
+```{r}
+data(stop_words)
+```
+
+```{r}
+custom_stop_words <- data.frame(
+    word = c("app", "should", "will", "could", "from", 'subject', 're', 'edu', 'use', 'app', 'you', 'my', 'this', "not", "bank", "banking", "it", "is"), 
+    lexicon = "custom"
+)
+
+stop_words_ext <- rbind(stop_words, custom_stop_words)
+
+```
+
+```{r}
+token_ios_data <- token_ios_data %>% anti_join(stop_words_ext)
+```
+
+Top words: 
+```{r}
+#IOS TOP WORDS 
+token_ios_data %>% count(word) %>% arrange(desc(n))
+```
+
+
+Visualizing the top words: 
+```{r}
+token_ios_data %>% count(word, sort = TRUE) %>%
+    filter(n > 600) %>% mutate(word = reorder(word, n)) %>%
+    ggplot(aes(n, word)) + 
+    geom_col(fill = '#037bfc') +
+    labs(y = NULL)
+```
+
+
+
+
+
+
+
+
+
+
+
